@@ -59,3 +59,16 @@ pub mod logger {
         Err(err)})
   }
 }
+
+pub mod reader {
+  use std::fs::File;
+  use std::io::{BufReader,BufRead};
+
+  pub fn from_file(file: String) -> Vec<String> {
+    let file_handle: File = File::open(&file).or_else::<File, _>(|err| panic!("Failed to open {}: {}", &file, err.to_string())).unwrap();
+    let buf = BufReader::new(file_handle);
+    buf.lines()
+       .map(|l| l.or_else::<File, _>(|err| panic!("Could not read file {}: {}", &file, err)).unwrap())
+       .collect()
+  }
+}

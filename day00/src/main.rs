@@ -1,15 +1,26 @@
-use common::args::Args;
+use common::args::{Args,Part};
 use common::logger::initialize;
-use log::{trace,info};
+use common::reader::from_file;
+use log::trace;
+
+pub struct Input {
+  part : Part,
+  lines: Vec<String>
+}
 
 fn main() {
-  let args: Args = Args::populate();
-  let result = initialize(args.log.clone());
+  let args   = Args::populate();
+  let result = initialize(args.log);
+
   if result.is_err() {
     panic!("Preparation failed!");
   }
-  trace!("Begin logging for {}", env!("CARGO_PKG_NAME"));
-  trace!("Parsing input...");
+  trace!("Start logging for {}", env!("CARGO_PKG_NAME"));
+  trace!("Parsing input from {}...", &args.input);
 
-  info!("Input: {} and Part: {}", args.input, args.part);
+  let lines: Vec<String> = from_file(args.input);
+
+  let mut content: Vec<String> = Vec::new();
+  lines.into_iter().for_each(|l| content.push(l));
+  trace!("Print input:\n{}", content.join("\n"));
 }
