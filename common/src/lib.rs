@@ -23,9 +23,9 @@ pub mod helper {
   /// assert_eq!(from_strings::<i32>(vec![]), empty);
   /// ```
   pub fn from_strings<T>(strings: Vec<String>) -> Vec<T> 
-    where T: FromStr,
-          <T as FromStr>::Err: Debug,
-          <T as FromStr>::Err: Display {
+  where T: FromStr,
+        <T as FromStr>::Err: Debug,
+        <T as FromStr>::Err: Display {
     let depths_result: Vec<Result<T,<T as FromStr>::Err>> = strings.iter().map(|d| d.parse::<T>()).collect();
   
     if let Some(Err(err)) = depths_result.iter().find(|l| l.is_err()) {
