@@ -38,12 +38,12 @@ pub mod args {
 
       #[test]
       fn display_part_one() {
-          assert_eq!(Part::One.to_str(), "one");
+          assert_eq!(Part::One.to_string(), "One");
       }
 
       #[test]
       fn display_part_two() {
-          assert_eq!(Part::Two.to_str(), "two");
+          assert_eq!(Part::Two.to_string(), "Two");
       }
   }
 }
