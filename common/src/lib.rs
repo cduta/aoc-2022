@@ -19,6 +19,9 @@ pub mod args {
     #[arg(short, long)]
     pub input: String,
 
+    #[arg(short, long, default_value_t = false)]
+    pub verbose: bool,
+
     #[arg(short, long, default_value = "one")]
     pub part: Part,
 
@@ -64,11 +67,59 @@ pub mod reader {
   use std::fs::File;
   use std::io::{BufReader,BufRead};
 
-  pub fn from_file(file: String) -> Vec<String> {
-    let file_handle: File = File::open(&file).or_else::<File, _>(|err| panic!("Failed to open {}: {}", &file, err.to_string())).unwrap();
-    let buf = BufReader::new(file_handle);
-    buf.lines()
-       .map(|l| l.or_else::<File, _>(|err| panic!("Could not read file {}: {}", &file, err)).unwrap())
-       .collect()
+  pub fn from_file(file: String) -> Result<Vec<String>,std::io::Error> {
+    let file_handle = File::open(&file);
+    if let Err(err) = file_handle {
+      return Err(err);
+    }
+    let lines :Vec<Result<String,std::io::Error>> = BufReader::new(file_handle.unwrap()).lines().collect();
+
+    if let Some(Err(err)) = lines.iter().find(|l| l.is_err()) {
+      return Err(std::io::Error::from(err.kind()));
+    }
+
+    Ok(lines.into_iter().map(|l| l.unwrap()).collect())
+  }
+}
+
+pub mod init {
+  use super::args::{Args,Part};
+  use super::logger::initialize;
+  use super::reader::from_file;
+  use log::trace;
+
+  #[derive(Debug)]
+  pub struct Input {
+    pub verbose: bool,
+    pub part   : Part,
+    pub lines  : Vec<String>
+  }
+  
+
+  pub fn startup() -> Input {
+    let args              = Args::populate();
+    let initialize_result = initialize(args.log.clone());
+    if initialize_result.is_err() {
+      panic!("Preparation failed!");
+    }
+
+    trace!("Loaded log config from {}", args.log);
+    trace!("Start logging");
+    trace!("Parsing input from `{}`", &args.input);
+
+    let lines_result: Result<Vec<String>,std::io::Error> = from_file(args.input);
+    if lines_result.is_err() {
+      panic!("Parsing failed: {}", lines_result.unwrap_err());
+    }
+
+    let mut lines: Vec<String> = Vec::new();
+    lines_result.unwrap().into_iter().for_each(|l| lines.push(l));
+    //trace!("Print input:\n{}", lines.join("\n"));
+
+    Input { verbose: args.verbose, part: args.part, lines: lines }
+  }
+
+  pub fn shutdown() {
+    trace!("Shutting down");
   }
 }
