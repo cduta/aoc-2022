@@ -5,6 +5,24 @@ pub struct Input {
   pub lines  : Vec<String>
 }
 
+pub mod helper {
+  use std::str::FromStr;
+  use std::fmt::{Debug,Display};
+
+  pub fn from_strings<T>(strings: Vec<String>) -> Vec<T> 
+    where T: FromStr,
+          <T as FromStr>::Err: Debug,
+          <T as FromStr>::Err: Display {
+    let depths_result: Vec<Result<T,<T as FromStr>::Err>> = strings.iter().map(|d| d.parse::<T>()).collect();
+  
+    if let Some(Err(err)) = depths_result.iter().find(|l| l.is_err()) {
+      panic!("Failed to parse all lines of input to {}: {err}", std::any::type_name::<T>());
+    }
+    
+    depths_result.into_iter().map(|d| d.unwrap()).collect()
+  }
+}
+
 pub mod args {
   use std::fmt;
   use clap::Parser;  
@@ -79,13 +97,13 @@ pub mod reader {
     if let Err(err) = file_handle {
       return Err(err);
     }
-    let lines :Vec<Result<String,std::io::Error>> = BufReader::new(file_handle.unwrap()).lines().collect();
+    let lines_result :Vec<Result<String,std::io::Error>> = BufReader::new(file_handle.unwrap()).lines().collect();
 
-    if let Some(Err(err)) = lines.iter().find(|l| l.is_err()) {
+    if let Some(Err(err)) = lines_result.iter().find(|l| l.is_err()) {
       return Err(std::io::Error::from(err.kind()));
     }
 
-    Ok(lines.into_iter().map(|l| l.unwrap()).collect())
+    Ok(lines_result.into_iter().map(|l| l.unwrap()).collect())
   }
 }
 

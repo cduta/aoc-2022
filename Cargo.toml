@@ -2,5 +2,6 @@
 
 members = [
   "common",
-  "day00"
+  "day-template",
+  "day01-21"
 ]
