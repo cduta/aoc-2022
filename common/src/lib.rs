@@ -1,3 +1,10 @@
+#[derive(Debug)]
+pub struct Input {
+  pub verbose: bool,
+  pub part   : args::Part,
+  pub lines  : Vec<String>
+}
+
 pub mod args {
   use std::fmt;
   use clap::Parser;  
@@ -86,17 +93,9 @@ pub mod init {
   use super::args::{Args,Part};
   use super::logger::initialize;
   use super::reader::from_file;
-  use log::trace;
+  use log::{trace,info};  
 
-  #[derive(Debug)]
-  pub struct Input {
-    pub verbose: bool,
-    pub part   : Part,
-    pub lines  : Vec<String>
-  }
-  
-
-  pub fn startup() -> Input {
+  pub fn startup() -> super::Input {
     let args              = Args::populate();
     let initialize_result = initialize(args.log.clone());
     if initialize_result.is_err() {
@@ -114,9 +113,12 @@ pub mod init {
 
     let mut lines: Vec<String> = Vec::new();
     lines_result.unwrap().into_iter().for_each(|l| lines.push(l));
-    //trace!("Print input:\n{}", lines.join("\n"));
 
-    Input { verbose: args.verbose, part: args.part, lines: lines }
+    super::Input { verbose: args.verbose, part: args.part, lines: lines }
+  }
+
+  pub fn print(day: String, part: Part, result: String) {
+    info!("The result of {} (Part {}) is: {}", day, part, result);
   }
 
   pub fn shutdown() {
