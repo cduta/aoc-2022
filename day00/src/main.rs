@@ -1,6 +1,6 @@
 use common::args::Args;
 use common::logger::initialize;
-use log::debug;
+use log::{trace,info};
 
 fn main() {
   let args: Args = Args::populate();
