@@ -26,7 +26,7 @@ fn one(input: &Input) -> String {
 
 fn two(input: &Input) -> String {
   struct Acc {
-    prevs : VecDeque<i32>,
+    prevs: VecDeque<i32>,
     count: i32
   }
   let sum = |acc: i32, x: &i32| acc+x;
@@ -39,14 +39,13 @@ fn two(input: &Input) -> String {
       Acc { prevs, count } if prevs.len() < 3 => {
         Acc { prevs: { let mut currs = prevs; currs.push_front(curr); currs }, count: count }
       },
-      Acc { prevs, count } => {
+      Acc { mut prevs, count } => {
         let prev_sum = prevs.iter().fold(0, sum);
-        let mut currs = prevs;
-        currs.pop_back();
-        currs.push_front(curr);
-        let curr_sum = currs.iter().fold(0, sum);
+        prevs.pop_back();
+        prevs.push_front(curr);
+        let curr_sum = prevs.iter().fold(0, sum);
 
-        Acc { prevs: currs, count: count + if prev_sum < curr_sum {1} else {0} }
+        Acc { prevs: prevs, count: count + if prev_sum < curr_sum {1} else {0} }
       }
     }
   });
