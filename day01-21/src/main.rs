@@ -36,8 +36,8 @@ fn two(input: &Input) -> String {
   let acc = depths.into_iter().fold(Acc { prevs: VecDeque::new(), count: 0 }, |acc, curr| {
     match acc {
       Acc { prevs, count: _ } if prevs.len() > 3 => panic!("On day two: prevs cannot have more than three elements. prevs: {:?}", prevs),
-      Acc { prevs, count } if prevs.len() < 3 => {
-        Acc { prevs: { let mut currs = prevs; currs.push_front(curr); currs }, count: count }
+      Acc { mut prevs, count } if prevs.len() < 3 => {
+        Acc { prevs: { prevs.push_front(curr); prevs }, count: count }
       },
       Acc { mut prevs, count } => {
         let prev_sum = prevs.iter().fold(0, sum);
