@@ -2,7 +2,8 @@ use common::helper::{from_strings};
 use common::Input;
 use common::args::Part;
 use common::init::{startup, print, shutdown};
-use log::trace;
+use log::{trace,info};
+use std::time::Instant;
 
 use std::collections::VecDeque;
 
@@ -66,7 +67,9 @@ fn main() {
     Part::Two => two
   };
 
+  let start = Instant::now();
   print(day, input.part.clone(), f(&input));
+  info!("Time elapsed: {} ms", start.elapsed().as_millis());
 
   shutdown();
 }
