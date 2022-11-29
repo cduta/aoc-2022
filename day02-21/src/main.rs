@@ -94,8 +94,21 @@ fn one(input: &Input) -> String {
   (result.x * result.y).to_string()
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  struct State { aim: i32, x: i32, y: i32 }
+
+  let result = lines_to_instructions(&input.lines).into_iter().fold(State {aim: 0, x: 0, y:0 }, 
+    | mut state, Inst { dir, arg } | {
+      match dir {
+        Dir::Forward => { state.x += arg; state.y += arg*state.aim },
+        Dir::Up      => state.aim -= arg,
+        Dir::Down    => state.aim += arg
+      };
+      state
+    }
+  );
+
+  (result.x * result.y).to_string()
 }
 
 fn main() {
