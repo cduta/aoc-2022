@@ -133,6 +133,7 @@ pub mod init {
   use super::logger::initialize;
   use super::reader::from_file;
   use log::{trace,info};  
+  use std::fmt::Display;
 
   /// Parse command-line arguments, 
   /// initialize log4rs, and 
@@ -160,7 +161,8 @@ pub mod init {
   }
 
   /// Print the result of the part of a day
-  pub fn print(day: String, part: Part, result: String) {
+  pub fn print<T>(day: String, part: Part, result: T) 
+  where T: Display {
     info!("The result of {} (Part {}) is: {}", day, part, result);
   }
 
