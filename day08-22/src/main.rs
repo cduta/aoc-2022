@@ -86,37 +86,28 @@ fn two(input: &Input) -> String {
   let (trees, width, height) = prepare(&input.lines);
   let mut scores: HashMap<(usize,usize), u64, RandomState> = HashMap::new();
 
+  #[derive(PartialEq)]
+  enum Dir {Horizontal, Vertical}
+
+  fn view(trees: &Matrix, start_tree: u8, fix: usize, range: std::ops::Range<usize>, rev: bool, dir: Dir) -> u64 {
+    let mut result = 0;
+    for i in if rev {range.rev().collect::<Vec<usize>>()} else {range.collect::<Vec<usize>>()} {
+      result += 1;
+      if start_tree <= (if dir == Dir::Horizontal {trees[fix][i]} else {trees[i][fix]}) {
+        break;
+      }
+    }
+    return result;
+  }
+
   (1..width-1).into_iter().for_each(|start_x|
     (1..height-1).into_iter().for_each(|start_y| {
       let start_tree = trees[start_y][start_x];
-      let mut right = 0;
-      for x in start_x+1..width {
-        right += 1;
-        if start_tree <= trees[start_y][x] {
-          break;
-        }
-      };
-      let mut left = 0;
-      for x in (0..start_x).rev() {
-        left += 1;
-        if start_tree <= trees[start_y][x] {
-          break;
-        }
-      };
-      let mut down = 0;
-      for y in start_y+1..height {
-        down += 1;
-        if start_tree <= trees[y][start_x] {
-          break;
-        }
-      };
-      let mut up = 0;
-      for y in (0..start_y).rev() {
-        up += 1;
-        if start_tree <= trees[y][start_x] {
-          break;
-        }
-      };
+      let right = view(&trees, start_tree, start_y, start_x+1..width , false, Dir::Horizontal);
+      let left  = view(&trees, start_tree, start_y, 0..start_x       , true , Dir::Horizontal);
+      let down  = view(&trees, start_tree, start_x, start_y+1..height, false, Dir::Vertical  );
+      let up    = view(&trees, start_tree, start_x, 0..start_y       , true , Dir::Vertical  );
+
       scores.insert((start_x+1,start_y+1), right*left*up*down);
     }
   ));
