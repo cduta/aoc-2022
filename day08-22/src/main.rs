@@ -5,6 +5,7 @@ use log::{trace,info};
 use std::collections::hash_map::RandomState;
 use std::time::Instant;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::cmp::max;
 
 type Row    = Vec<u8>;
@@ -81,8 +82,49 @@ fn one(input: &Input) -> String {
   return visible.len().to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  let (trees, width, height) = prepare(&input.lines);
+  let mut scores: HashMap<(usize,usize), u64, RandomState> = HashMap::new();
+
+  (1..width-1).into_iter().for_each(|start_x|
+    (1..height-1).into_iter().for_each(|start_y| {
+      let start_tree = trees[start_y][start_x];
+      let mut right = 0;
+      for x in start_x+1..width {
+        right += 1;
+        if start_tree <= trees[start_y][x] {
+          break;
+        }
+      };
+      let mut left = 0;
+      for x in (0..start_x).rev() {
+        left += 1;
+        if start_tree <= trees[start_y][x] {
+          break;
+        }
+      };
+      let mut down = 0;
+      for y in start_y+1..height {
+        down += 1;
+        if start_tree <= trees[y][start_x] {
+          break;
+        }
+      };
+      let mut up = 0;
+      for y in (0..start_y).rev() {
+        up += 1;
+        if start_tree <= trees[y][start_x] {
+          break;
+        }
+      };
+      scores.insert((start_x+1,start_y+1), right*left*up*down);
+    }
+  ));
+
+  let ((x,y),score) = scores.iter().max_by(|(_,s1),(_,s2)| s1.cmp(s2)).unwrap(); 
+  trace!("Best position is at ({x},{y}) with a score of {score}");
+
+  return score.to_string();
 }
 
 fn main() {
