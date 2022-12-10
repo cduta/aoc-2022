@@ -78,8 +78,8 @@ fn two(input: &Input) -> String {
   let instructions = prepare(&input.lines);
   let crt_width = 40;
 
-  fn draw(crt: &mut String, crt_width: &usize, scan_pos: &mut i32, sprite_pos: &i32, cycles_needed: i32) {
-    if cycles_needed > 0 {
+  fn draw(crt: &mut String, crt_width: &usize, scan_pos: &mut i32, sprite_pos: &i32, mut cycles_needed: i32) {
+    while cycles_needed > 0 {
       let local_scan_pos = *scan_pos % (*crt_width as i32);
       *crt = format!("{}{}{}", 
               *crt, 
@@ -87,7 +87,7 @@ fn two(input: &Input) -> String {
               if *sprite_pos-1 <= local_scan_pos && local_scan_pos <= *sprite_pos+1 {"#"} else {"."}
             );
       *scan_pos += 1;
-      draw(crt, crt_width, scan_pos, sprite_pos, cycles_needed-1);
+      cycles_needed -= 1;
     }
   }
 
