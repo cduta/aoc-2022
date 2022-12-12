@@ -67,7 +67,7 @@ impl ThrowTest {
 }
 
 #[derive(Debug)]
-struct Monkey { items: VecDeque<i64>, operation: Op, throw_test: ThrowTest }
+struct Monkey { items: VecDeque<i64>, operation: Op, throw_test: ThrowTest, inspected: i64 }
 
 impl Monkey {
   fn new(monkey_strings: &Vec<&String>) -> Monkey {
@@ -89,12 +89,14 @@ impl Monkey {
       },
       throw_test: ThrowTest::new(&monkey_strings[3].replace("  Test: divisible by ", ""), 
                                  &monkey_strings[4].replace("    If true: throw to monkey ", ""), 
-                                 &monkey_strings[5].replace("    If false: throw to monkey ", ""))
+                                 &monkey_strings[5].replace("    If false: throw to monkey ", "")),
+      inspected: 0
     }
   }
 
-  fn throw(&self, item: i64, throw_to: &mut Vec<VecDeque<i64>>) {
-    throw_to[(&self).throw_test.which(item)].push_back(item);
+  fn throw(&self, item: i64, throw_to: &mut Vec<VecDeque<i64>>, modulo: i64, relieve: i64) {
+    let new_item = ((&self).operation.apply(item)/relieve) % modulo;
+    throw_to[(&self).throw_test.which(new_item)].push_back(new_item);
   }
 }
 
@@ -123,34 +125,58 @@ fn prepare(lines: &Vec<String>) -> Vec<Monkey> {
   }).collect()
 }
 
-fn play(mut monkeys: Vec<Monkey>, rounds: i64) -> Vec<Monkey> {
-  (0..rounds).for_each(|round| {
+fn play(mut monkeys: Vec<Monkey>, rounds: i64, relieve: i64) -> Vec<Monkey> {
+  let modulo = monkeys.iter().map(|monkey| monkey.throw_test.divisible_by).product();
+  (0..rounds).for_each(|_round| {
     for i in 0..monkeys.len() {
       let mut throws: Vec<VecDeque<i64>> = (0..monkeys.len()).map(|_| VecDeque::new()).collect();
       monkeys[i].items.iter().for_each(|item| {
-        monkeys[i].throw(monkeys[i].operation.apply(*item)/3, &mut throws);
+        monkeys[i].throw(*item, &mut throws, modulo, relieve);
       });
+      monkeys[i].inspected += monkeys[i].items.len() as i64;
       monkeys[i].items.clear();
       throws.iter_mut().enumerate().for_each(|(j,items)| monkeys[j].items.append(items));
     }
-    trace!("After round {round}, the monkeys are holding items with these worry levels:");
-    trace!("{}", monkeys.iter().enumerate().fold(
-      "".to_string(),
-      |acc, (i, monkey)| {
-        format!("{acc}\nMonkey {i}: {monkey}")
-      }));
+    // trace!("After round {round}, the monkeys are holding items with these worry levels:");
+    // trace!("{}", monkeys.iter().enumerate().fold(
+    //   "".to_string(),
+    //   |acc, (i, monkey)| {
+    //     format!("{acc}\nMonkey {i}: {monkey}")
+    //   }));
   });
   monkeys
 }
 
 fn one(input: &Input) -> String {
-  let _monkeys = play(prepare(&input.lines), 20);
+  let monkeys: Vec<i64> = play(prepare(&input.lines), 20, 3).into_iter().map(|monkey| monkey.inspected).collect();
 
-  return "42".to_string();
+  trace!("{}", monkeys.iter().enumerate().fold(
+    "".to_string(),
+    |acc, (i, inspected)| {
+      format!("{acc}\nMonkey {i} inspected items {inspected} times")
+    }
+  ));
+
+  let mut monkey_business = monkeys.into_iter().enumerate().collect::<Vec<(usize,i64)>>();
+  monkey_business.sort_by(|(_,x), (_,y)| y.cmp(x));
+
+  return (monkey_business[0].1 * monkey_business[1].1).to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  let monkeys: Vec<i64> = play(prepare(&input.lines), 10000, 1).into_iter().map(|monkey| monkey.inspected).collect();
+
+  trace!("{}", monkeys.iter().enumerate().fold(
+    "".to_string(),
+    |acc, (i, inspected)| {
+      format!("{acc}\nMonkey {i} inspected items {inspected} times")
+    }
+  ));
+
+  let mut monkey_business = monkeys.into_iter().enumerate().collect::<Vec<(usize,i64)>>();
+  monkey_business.sort_by(|(_,x), (_,y)| y.cmp(x));
+
+  return (monkey_business[0].1 * monkey_business[1].1).to_string();
 }
 
 fn main() {
