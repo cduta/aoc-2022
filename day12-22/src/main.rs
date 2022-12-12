@@ -23,8 +23,8 @@ impl HeightMap {
   fn new(lines: &Vec<String>) -> HeightMap {
     let mut width  = 0;
     let     height = lines.len();
-    let mut start: Option<(usize, usize)> = None;
-    let mut end  : Option<(usize, usize)> = None;
+    let mut start: Option<Node> = None;
+    let mut end  : Option<Node> = None;
     let map = lines.iter().enumerate().map(
       |(y,line)| {
         let row: Vec<Height> = line.chars().enumerate().map(
@@ -53,63 +53,66 @@ impl HeightMap {
   }
 }
 
-#[derive(Debug,Hash,Eq)]
-struct Node { pos: (usize,usize), steps: u32 }
+type Node = (usize,usize);
 
-impl Node {
-  fn new(pos: (usize,usize), steps: u32) -> Node { Node { pos: pos, steps: steps } }
-
-  fn adjacent(&self, width: usize, height: usize) -> Vec<Node> {
-    vec![(1,0),(0,1),(-1,0),(0,-1)].into_iter().map(
-      |(dx,dy): (i32,i32)| {
-        let (nx,ny) = ((&self).pos.0 as i32+dx, (&self).pos.1 as i32+dy);
-        if 0 <= nx && nx < width as i32 && 0 <= ny && ny < height as i32 { 
-          Some(Node { pos: (nx as usize, ny as usize), steps: (&self).steps+1 })
-        } else {
-          None
-        }
+fn adjacent(node: Node, width: usize, height: usize) -> Vec<Node> {
+  vec![(1,0),(0,1),(-1,0),(0,-1)].into_iter().map(
+    |(dx,dy): (i32,i32)| {
+      let (nx,ny) = (node.0 as i32+dx, node.1 as i32+dy);
+      if 0 <= nx && nx < width as i32 && 0 <= ny && ny < height as i32 { 
+        Some((nx as usize, ny as usize))
+      } else {
+        None
       }
-    ).filter_map(|node_option| node_option).collect()
-  }
+    }
+  ).filter_map(|node_option| node_option).collect()
 }
 
-impl PartialEq for Node {
-  fn eq(&self, other: &Self) -> bool {
-      (&self).pos == other.pos
-  }
-}
-
-fn one(input: &Input) -> String {
-  let height_map = HeightMap::new(&input.lines);
-
+fn astar(height_map: HeightMap, start: Node, end: Node) -> Option<Vec<Node>> {
   let mut unvisited = DoublePriorityQueue::new();
-  unvisited.push(Node::new(height_map.start, 0), height_map.manhattan_distance(&height_map.start, &height_map.end));
+  unvisited.push((None, start), 0);
 
   let mut visited = HashMap::new();
 
-  while !unvisited.is_empty() && !visited.contains_key(&height_map.end) {
-    let (curr,steps) = unvisited.pop_min().unwrap();
-    visited.insert(curr.pos, curr.steps);
-    curr.adjacent(height_map.width,height_map.height).into_iter().for_each(
+  while !unvisited.is_empty() && !visited.contains_key(&end) {
+    let ((prev_option, curr), steps) = unvisited.pop_min().unwrap();
+    visited.insert(curr, (prev_option, steps));
+    adjacent(curr, height_map.width,height_map.height).into_iter().for_each(
       |next| {
-        let curr_height = height_map.height_at(&curr.pos);
-        let next_height = height_map.height_at(&next.pos);
-        if !visited.contains_key(&next.pos) && (next_height == 0 || curr_height >= next_height-1) {
-          let heuristic = steps+1;//= steps+height_map.manhattan_distance(&next.pos, &height_map.end)+1;
-          unvisited.push(next, heuristic);
+        let curr_height = height_map.height_at(&curr);
+        let next_height = height_map.height_at(&next);
+        let next_steps = steps+1+height_map.manhattan_distance(&next, &end);
+        let visited_option = visited.get(&next);
+        if (visited_option.is_none() || visited_option.is_some() && next_steps < visited_option.unwrap().1) && 
+           (next_height == 0 || curr_height >= next_height-1) {
+          unvisited.push((Some(curr), next), steps+1);
         }
       }
     );
   }  
 
-  trace!("Visited:\n{visited:?}");
+  // trace!("Visited:\n{visited:?}");
 
-  trace!("How many steps from start {:?} to end {:?}: {}", 
-           height_map.start, 
-           height_map.end, 
-           if let Some(steps) = visited.get(&height_map.end) {steps.to_string()} else {"Unreachable".to_string()});
+  // trace!("How many steps from start {:?} to end {:?}: {}", 
+  //          height_map.start, 
+  //          height_map.end, 
+  //          if let Some(steps) = visited.get(&height_map.end) {steps.to_string()} else {"Unreachable".to_string()});
 
-  return if let Some(steps) = visited.get(&height_map.end) {steps.to_string()} else {"Unreachable".to_string()};
+  let mut path = vec![end];
+  let mut curr = &end;
+  
+  while let Some((Some(prev),_)) = visited.get(curr) {
+    path.push(*prev);
+    curr = prev;
+  }
+
+  return if visited.contains_key(&end) {Some(path)} else {None};
+}
+
+fn one(input: &Input) -> String {
+  let height_map = HeightMap::new(&input.lines);
+  let (start, end) = (height_map.start, height_map.end);
+  return if let Some(path) = astar(height_map, start, end) {path.len().to_string()} else {"Unreachable".to_string()};
 }
 
 fn two(_input: &Input) -> String {
