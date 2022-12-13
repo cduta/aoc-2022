@@ -2,7 +2,7 @@ use common::Input;
 use common::args::Part;
 use common::init::{startup, print, shutdown};
 use log::{trace,info};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::time::Instant;
 use priority_queue::DoublePriorityQueue;
 
@@ -55,17 +55,12 @@ impl HeightMap {
 
 type Node = (usize,usize);
 
-fn adjacent(curr: Node, height_map: &HeightMap) -> Vec<Node> {
+fn adjacent(node: Node, width: usize, height: usize) -> Vec<Node> {
   vec![(1,0),(0,1),(-1,0),(0,-1)].into_iter().map(
     |(dx,dy): (i32,i32)| {
-      let (nx,ny) = (curr.0 as i32+dx, curr.1 as i32+dy);
-      if 0 <= nx && nx < height_map.width as i32 && 0 <= ny && ny < height_map.height as i32 { 
-        let (curr_height, next_height) = (height_map.height_at(&curr), height_map.height_at(&(nx as usize, ny as usize)));
-        if next_height == 0 || curr_height >= next_height-1 {
-          Some((nx as usize, ny as usize))
-        } else {
-          None
-        }
+      let (nx,ny) = (node.0 as i32+dx, node.1 as i32+dy);
+      if 0 <= nx && nx < width as i32 && 0 <= ny && ny < height as i32 { 
+        Some((nx as usize, ny as usize))
       } else {
         None
       }
@@ -74,51 +69,49 @@ fn adjacent(curr: Node, height_map: &HeightMap) -> Vec<Node> {
 }
 
 fn astar(height_map: &HeightMap, start: Node, end: Node, memo: &mut HashMap<Node, Vec<Node>>) -> Option<Vec<Node>> {
-  let mut open_set = HashSet::new();
-  let mut came_from = HashMap::new();
-  let mut g_score = HashMap::new();
-  let mut f_score = DoublePriorityQueue::new();
+  let mut unvisited = DoublePriorityQueue::new();
+  unvisited.push((None, start), 0);
 
-  open_set.insert(start);
-  g_score.insert(start, 0);
-  f_score.push(start, height_map.manhattan_distance(&start, &end));
+  let mut visited = HashMap::new();
 
-  while !open_set.is_empty() {
-    let (current, _) = f_score.pop_min().unwrap();
-    if current == end {
-      break;
-    }
-    open_set.remove(&current);
-
-    adjacent(current, height_map).into_iter().for_each(
-      |neighbor| {
-        let tentatitve_score_option = g_score.get(&current).map(|g| *g+1);
-        if let Some(tentative_score) = tentatitve_score_option {
-          let g_score_neighbor_option = g_score.get(&neighbor);
-          if g_score_neighbor_option.is_none() || tentative_score < *g_score_neighbor_option.unwrap() {
-            came_from.insert(neighbor, current);
-            g_score.insert(neighbor, tentative_score);
-            f_score.push(neighbor, tentative_score + height_map.manhattan_distance(&neighbor, &end));
-            if !open_set.contains(&neighbor) {
-              open_set.insert(neighbor);
-            }
-          }
+  while !unvisited.is_empty() && !visited.contains_key(&end) {
+    let ((prev_option, curr), steps) = unvisited.pop_min().unwrap();
+    visited.insert(curr, (prev_option, steps));
+    adjacent(curr, height_map.width,height_map.height).into_iter().for_each(
+      |next| {
+        let curr_height = height_map.height_at(&curr);
+        let next_height = height_map.height_at(&next);
+        let next_steps = steps+1+height_map.manhattan_distance(&next, &end);
+        let visited_option = visited.get(&next);
+        if (visited_option.is_none() || visited_option.is_some() && next_steps < visited_option.unwrap().1) && 
+           (next_height == 0 || curr_height >= next_height-1) && 
+           !memo.contains_key(&next) {
+          unvisited.push((Some(curr), next), steps+1);
         }
       }
     );
-  }
+  }  
+
+  // trace!("Visited:\n{visited:?}");
+
+  // trace!("How many steps from start {:?} to end {:?}: {}", 
+  //          height_map.start, 
+  //          height_map.end, 
+  //          if let Some(steps) = visited.get(&height_map.end) {steps.to_string()} else {"Unreachable".to_string()});
 
   let mut path = vec![end];
   let mut curr = &end;
   
-  while let Some(prev) = came_from.get(curr) {
-    //memo.insert(*curr, path.clone().into_iter().rev().collect());
+  while let Some((Some(prev),_)) = visited.get(curr) {
+    if height_map.height_at(curr) == 0 {
+      memo.insert(*curr, path.clone().into_iter().rev().collect());
+    }
     path.push(*prev);
     curr = prev;
   }
 
   path.reverse();
-  return if came_from.contains_key(&end) {Some(path)} else {None};
+  return if visited.contains_key(&end) {Some(path)} else {None};
 }
 
 fn one(input: &Input) -> String {
