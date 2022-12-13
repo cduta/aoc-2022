@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 use std::fmt::Display;
 use std::time::Instant;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 enum Token { BOpen, BClose, Comma, Num(i32) }
 
 impl Token {
@@ -32,23 +32,7 @@ impl Token {
   }
 }
 
-/*
-  [[1],[2,3,4]]
-  [[1],4]
-
-  [   ,             ]       [   ,             ]                                     
-    |        |                |        |                                     
-   [ ] [   ,   ,   ]         [ ] [   ,   ,   ]                                     
-    |    |   |   |            |    |   |   |                                     
-    1    2   3   4            1    2   3   4                                     
-                        => 
-  [   ,   ]                 [   ,   ]                                              
-    |   |                     |   |                                              
-   [ ]  4                    [ ] [ ]                                                 
-    |                         |   |                                          
-    1                         1   4                                          
- */
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq)]
 enum Tree { Empty, Leaf(i32), Node(Vec<Tree>) }
 
 impl Tree {
@@ -114,7 +98,7 @@ impl Display for Tree {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 struct Pair { left: Tree, right: Tree }
 
 impl Pair {
@@ -200,19 +184,36 @@ impl Display for Pair {
 
 fn one(input: &Input) -> String {
   let mut pairs = Pair::parse_pairs(&input.lines);
-
-  //trace!("{}", pairs.iter().fold("".to_string(), |acc, pair| format!("{acc}{pair}\n\n")));
-
-  pairs.iter_mut().for_each(|pair| pair.depth_correct());  
-
-  //trace!("Correcting!");
-  //trace!("{}", pairs.iter().fold("".to_string(), |acc, pair| format!("{acc}{pair}\n\n")));
-
+  pairs.iter_mut().for_each(|pair| pair.depth_correct()); 
   return pairs.iter().enumerate().map(|(i,pair)| if let Some(true) = pair.check() {i+1} else {0} ).sum::<usize>().to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  let mut trees = Pair::parse_pairs(&input.lines).into_iter().fold(vec![], |mut acc, Pair {left, right}| { acc.push(left); acc.push(right); acc });
+  let (sep1, sep2) = (Tree::Node(vec![Tree::Node(vec![Tree::Leaf(2)])]), Tree::Node(vec![Tree::Node(vec![Tree::Leaf(6)])]));
+  trees.push(sep1.clone());
+  trees.push(sep2.clone());
+  trees.sort_by(|l,r| {
+    let mut pair = Pair{ left: l.clone(), right: r.clone() };
+    pair.depth_correct();
+    match pair.check() {
+      Some(true)  => Ordering::Less, 
+      Some(false) => Ordering::Greater,
+      None        => Ordering::Equal
+    }
+  });
+
+  trace!("{}", trees.iter().fold("".to_string(), |acc, tree| format!("{acc}\n{tree}")));
+
+  return trees.iter().enumerate().map(
+    |(i,tree)| {
+      if *tree == sep1 || *tree == sep2 {
+        i+1
+      } else {
+        1
+      }
+    }
+  ).product::<usize>().to_string();
 }
 
 fn main() {
