@@ -24,10 +24,10 @@ impl Display for Unit {
 }
 
 #[derive(Debug)]
-struct Cave { objects: HashMap<Point, Unit>, height: i32 }
+struct Cave { objects: HashMap<Point, Unit>, height: i32, has_bottom: bool }
 
 impl Cave {
-  fn new(lines: &Vec<String>) -> Cave { 
+  fn new(lines: &Vec<String>, has_bottom: bool) -> Cave { 
     fn to_drawings(lines: &Vec<String>) -> Vec<Vec<Point>> {
       lines.iter().map(|line| {
         line.split(" -> ").map(
@@ -86,7 +86,7 @@ impl Cave {
 
     let (_, (_, height)) = Cave::to_dimensions(&objects);
 
-    return Cave { objects: objects, height: height }
+    return Cave { objects: objects, height: height, has_bottom: has_bottom }
   }
 
   fn to_dimensions(objects: &HashMap<Point, Unit>) -> (Point, Point) {
@@ -101,8 +101,9 @@ impl Cave {
     return ((*xs.first().unwrap(),*ys.first().unwrap()),(*xs.last().unwrap(),*ys.last().unwrap()));
   }
 
+  fn height(&self) -> i32 {(&self).height + if (&self).has_bottom {1} else {0} }
   fn dimensions(&self) -> (Point, Point) { Cave::to_dimensions(&self.objects) }
-  fn at_abyss(&self, p: Point) -> bool { p.1 == (&self).height }
+  fn end_reached(&self, p: Point) -> bool { p.1 == (&self).height() }
 
   fn sand_flow(&mut self) {
     fn sand_step(cave: &Cave, (x,y): Point) -> Option<Point> {
@@ -126,9 +127,9 @@ impl Cave {
         let mut sand_pos = sources[i];
         let mut fix = false;
         while !fix {
-          if (&self).at_abyss(sand_pos) {
+          if (&self).end_reached(sand_pos) {
             fix = true;
-            abyss_reached = true;
+            abyss_reached = !(&self).has_bottom;
           } else if let Some(new_pos) = sand_step(&self, sand_pos) {
             sand_pos = new_pos;
           } else {
@@ -149,15 +150,19 @@ impl Cave {
 impl Display for Cave {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let dims@(ul, dr) = (&self).dimensions();
-      write!(f, "{:?}{}", dims, ((ul.1)..=(dr.1)+1).fold(
+      write!(f, "{:?}{}", dims, ((ul.1)..=(&self).height()+1).fold(
         String::new(),
         |acc, y| {
           format!("{acc}\n{}", ((ul.0)..=(dr.0)).fold(
             String::new(),
             |acc, x| {
               format!("{acc}{}", 
-                if y == (dr.1)+1 {
-                  "v".to_string()
+                if y == (&self).height()+1 {
+                  if (&self).has_bottom {
+                    "#"
+                  } else {
+                    "v"
+                  }.to_string()
                 } else {
                   match (&self).objects.get(&(x,y)) {
                     Some(unit) => unit.to_string(), 
@@ -174,7 +179,7 @@ impl Display for Cave {
 }
 
 fn one(input: &Input) -> String {
-  let mut cave = Cave::new(&input.lines);
+  let mut cave = Cave::new(&input.lines, false);
 
   trace!("{cave}");
   cave.sand_flow();
@@ -183,8 +188,14 @@ fn one(input: &Input) -> String {
   return cave.count_sand().to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  let mut cave = Cave::new(&input.lines, true);
+
+  trace!("{cave}");
+  cave.sand_flow();
+  trace!("{cave}");
+
+  return cave.count_sand().to_string();
 }
 
 fn main() {
