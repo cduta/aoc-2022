@@ -106,8 +106,7 @@ fn two(input: &Input) -> String {
     let merged_ranges: Vec<(i64,i64)> = ranges.fold(
       HashSet::new(),
       |mut acc, range_option| {
-        match range_option {
-          Some(range@(mut lower, mut upper)) => {
+        if let Some(range@(mut lower, mut upper)) = range_option {
             lower = max(0,lower);
             upper = min(2*input_y,upper);
             let to_merge: Vec<(i64, i64)> = acc.iter().filter(
@@ -124,9 +123,7 @@ fn two(input: &Input) -> String {
               to_merge.into_iter().for_each(|range| { acc.remove(&range); } );
               acc.insert(new_range);
             }
-          },
-          None                      => ()
-        };      
+          };      
         acc
       }
     ).into_iter().collect();
