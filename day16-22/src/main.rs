@@ -158,8 +158,111 @@ fn one(input: &Input) -> String {
   return release_pressure(&valves, &distance_matrix, string_map["AA"], 30).to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn elephant_pressure(valves: &Vec<Valve>, distance_matrix: &Vec<Vec<Distance>>, start: ValveId, total_mins: Time) -> Flow {
+  let mut steps = vec![(start, 0, start, 0, total_mins, 0, HashSet::<ValveId>::new())];
+  let mut result = 0;
+
+  while let Some((h_pos, h_wait, e_pos, e_wait, mins_left, released, mut open)) = steps.pop() {
+    let new_h_wait;
+    let new_e_wait;
+    let new_mins_left;
+    let mut r = result;
+    if h_wait == e_wait && h_wait < mins_left { // Both wait the same amount
+      new_mins_left = mins_left - h_wait;
+      r = if h_pos == e_pos {0} else {
+        let r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait));
+        result = std::cmp::max(result, r);
+        open.insert(h_pos);
+        open.insert(e_pos);
+        r
+      };
+
+      let h_steps = distance_matrix[h_pos].iter().fold(
+        Vec::new(),
+        |mut acc, Distance {mins: ht, valve_id: hv}| {
+          if mins_left >= *ht && !open.contains(hv) {
+            acc.push((*ht, *hv));
+          };
+          acc
+        }
+      );
+
+      let e_steps = distance_matrix[e_pos].iter().fold(
+        Vec::new(),
+        |mut acc, Distance {mins: et, valve_id: ev}| {
+          if mins_left >= *et && !open.contains(ev) {
+            acc.push((*et, *ev));
+          };
+          acc
+        }
+      );
+
+      if !h_steps.is_empty() && !e_steps.is_empty() {
+        h_steps.iter().for_each(
+          |(ht,hv)| {
+            e_steps.iter().for_each(
+              |(et,ev)| {
+                if *hv != *ev {
+                  steps.push((*hv, *ht, *ev, *et, new_mins_left, r, open.clone()));
+                }
+              }
+            );
+          }
+        );
+      } else if !h_steps.is_empty() {
+        h_steps.iter().for_each(
+          |(ht,hv)| {
+            steps.push((*hv, *ht, e_pos, 100, new_mins_left, r, open.clone()));
+          }
+        );
+      } else if !e_steps.is_empty() {
+        e_steps.iter().for_each(
+          |(et,ev)| {
+            steps.push((e_pos, 100, *ev, *et, new_mins_left, r, open.clone()));
+          }
+        );
+      } 
+
+    } else if h_wait < e_wait && h_wait < mins_left { // Elephant must wait longer
+      new_e_wait = e_wait - h_wait;
+      new_mins_left = mins_left - h_wait;
+      r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait));
+      result = std::cmp::max(result, r);
+      open.insert(h_pos);
+
+      distance_matrix[h_pos].iter().for_each(
+        |Distance {mins: t, valve_id: v}| {
+          if new_mins_left >= *t && !open.contains(v) {
+            steps.push((*v, *t, e_pos, new_e_wait, new_mins_left, r, open.clone()));
+          }
+        }
+      );
+    } else if h_wait > e_wait && e_wait < mins_left { // Human must wait longer
+      new_h_wait = h_wait - e_wait;
+      new_mins_left = mins_left - e_wait;
+      r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * e_wait));
+      result = std::cmp::max(result, r);
+      open.insert(e_pos);
+
+      distance_matrix[e_pos].iter().for_each(
+        |Distance {mins: t, valve_id: v}| {
+          if new_mins_left >= *t && !open.contains(v) {
+            steps.push((h_pos, new_h_wait, *v, *t, new_mins_left, r, open.clone()));
+          }
+        }
+      );
+    }
+    result = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * mins_left));
+  }
+
+  return result;
+}
+
+fn two(input: &Input) -> String {
+  let (valves, string_map) = prepare(&input.lines);
+  let distance_matrix = distance_matrix(&valves);
+
+  return elephant_pressure(&valves, &distance_matrix, string_map["AA"], 26).to_string();
 }
 
 fn main() {
