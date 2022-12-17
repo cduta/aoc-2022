@@ -166,11 +166,11 @@ fn elephant_pressure(valves: &Vec<Valve>, distance_matrix: &Vec<Vec<Distance>>, 
     let new_h_wait;
     let new_e_wait;
     let new_mins_left;
-    let mut r = result;
+    let r;
     if h_wait == e_wait && h_wait < mins_left { // Both wait the same amount
       new_mins_left = mins_left - h_wait;
       r = if h_pos == e_pos {0} else {
-        let r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait));
+        let r = open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait);
         result = std::cmp::max(result, r);
         open.insert(h_pos);
         open.insert(e_pos);
@@ -226,7 +226,7 @@ fn elephant_pressure(valves: &Vec<Valve>, distance_matrix: &Vec<Vec<Distance>>, 
     } else if h_wait < e_wait && h_wait < mins_left { // Elephant must wait longer
       new_e_wait = e_wait - h_wait;
       new_mins_left = mins_left - h_wait;
-      r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait));
+      r = open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * h_wait);
       result = std::cmp::max(result, r);
       open.insert(h_pos);
 
@@ -240,7 +240,7 @@ fn elephant_pressure(valves: &Vec<Valve>, distance_matrix: &Vec<Vec<Distance>>, 
     } else if h_wait > e_wait && e_wait < mins_left { // Human must wait longer
       new_h_wait = h_wait - e_wait;
       new_mins_left = mins_left - e_wait;
-      r = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * e_wait));
+      r = open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * e_wait);
       result = std::cmp::max(result, r);
       open.insert(e_pos);
 
