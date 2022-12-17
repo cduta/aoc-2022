@@ -6,17 +6,20 @@ use std::collections::{HashSet, HashMap};
 use std::fmt::Display;
 use std::time::Instant;
 
-#[derive(Clone)]
+type ValveId = usize;
+type Flow = u32;
+type Time = u32;
+
+#[derive(Debug)]
 struct Valve { 
-  id       : usize, 
+  id       : ValveId, 
   name     : String, 
-  flow     : i64, 
-  open     : bool, 
-  neighbors: HashSet<usize> }
+  flow     : Flow, 
+  neighbors: HashSet<ValveId> }
 
 impl Valve {
-  fn new(id: usize, name: String, flow: i64, neighbors: HashSet<usize>) -> Valve {
-    Valve { id, name, flow, open: false, neighbors }
+  fn new(id: ValveId, name: String, flow: Flow, neighbors: HashSet<ValveId>) -> Valve {
+    Valve { id, name, flow, neighbors }
   }
 }
 
@@ -28,11 +31,10 @@ impl Display for Valve {
     } else {
       String::new()
     };
-    write!(f, "({:>2} {} {:>2} {}) -> [{}]", 
+    write!(f, "({:>2} {} {:>2}) -> [{}]", 
       self.id, 
       self.name, 
       self.flow, 
-      if self.open {'✓'} else {'✗'}, 
       neighbor_iter.fold(
         first_neighbor,
         |acc, nid| {
@@ -43,8 +45,8 @@ impl Display for Valve {
   } 
 }
 
-fn prepare(lines: &Vec<String>) -> (HashMap<usize, Valve>, HashMap<String, usize>) {
-  fn parse(line: &String) -> (String, i64, HashSet<String>) {
+fn prepare(lines: &Vec<String>) -> (Vec<Valve>, HashMap<String,ValveId>) {
+  fn parse(line: &String) -> (String, Flow, HashSet<String>) {
     let mut first_split: Vec<&str> = line.split("; tunnels lead to valves ").collect();
     if first_split.len() == 1 {
       first_split = line.split("; tunnel leads to valve ").collect();
@@ -55,54 +57,52 @@ fn prepare(lines: &Vec<String>) -> (HashMap<usize, Valve>, HashMap<String, usize
     
 
     return (second_split[0].split("Valve ").nth(1).unwrap().to_string(), 
-            second_split[1].parse::<i64>().unwrap(), 
+            second_split[1].parse::<Flow>().unwrap(), 
             first_split[1].split(", ").map(|e| e.to_string()).collect());
   }
 
-  let mut valve_parsed = HashMap::new();
+  let mut valve_parsed = vec![];
   let mut name_ids = HashMap::new();
   lines.iter().enumerate().for_each(
     |(i,line)| {
-      let (name, flow_string, neighbor_strings) = parse(line);
-      valve_parsed.insert(i+1, (name.to_string(), flow_string, neighbor_strings));
-      name_ids.insert(name, i+1);
+      let (name, flow, neighbor_strings) = parse(line);
+      valve_parsed.push((name.to_string(), flow, neighbor_strings));
+      name_ids.insert(name, i);
     }
   );
   
-  let mut valves = HashMap::new();
+  let mut valves = vec![];
 
-  valve_parsed.iter().for_each(
+  valve_parsed.iter().enumerate().for_each(
     |(i, (name, flow, neighbor_names))| {
-      valves.insert(*i, Valve::new(
-        *i, 
+      valves.push(Valve::new(
+        i, 
         name.to_string(), 
         *flow, 
         neighbor_names.iter().map(
           |name| 
             name_ids[name]
-        ).collect::<HashSet<usize>>()));
+        ).collect::<HashSet<ValveId>>()));
     }
   );
   return (valves, name_ids);
 }
 
-fn trace_valves(valve_map: &HashMap<usize, Valve>) {
-  let mut valves: Vec<&usize> = valve_map.keys().collect();
-  valves.sort_by(|v1, v2| valve_map[v1].id.cmp(&valve_map[v2].id));
+#[derive(Debug)]
+struct Distance { mins: Time, valve_id: ValveId }
 
-  trace!("{}", valves.iter().fold(
-    String::new(),
-    |acc, id| {
-      format!("{acc}\n{}", valve_map[id])
+fn distance_matrix(valves: &Vec<Valve>) -> Vec<Vec<Distance>>{
+  let mut distance_matrix = vec![];
+  let useless = valves.iter().filter(|v| v.flow == 0).fold(
+    HashSet::new(), 
+    |mut acc, v| {
+      acc.insert(v.id); 
+      acc
     }
-  ));
-}
-
-fn make_distance_map(valve_map: &HashMap<usize, Valve>) -> HashMap<usize, Vec<(usize,usize)>>{
-  let mut distance_map = HashMap::new();
-  valve_map.values().for_each(
+  );
+  valves.iter().for_each(
     |valve| {
-      let mut minutes: usize = 1;
+      let mut mins: Time = 1;
       let mut visited = HashSet::new();
       let mut distances = Vec::new();
       let mut to_visit = HashSet::new();
@@ -112,39 +112,50 @@ fn make_distance_map(valve_map: &HashMap<usize, Valve>) -> HashMap<usize, Vec<(u
         let mut next_visit = HashSet::new();
         to_visit.iter().for_each(
           |id| {
-            distances.push((minutes, *id));
+            distances.push(Distance { mins: mins, valve_id: *id });
             visited.insert(*id);
-            (&(&valve_map.get(&id).unwrap().neighbors - &visited) - &to_visit).into_iter().for_each(|id| { next_visit.insert(id); } );
+            (&(&valves[*id].neighbors - &visited) - &to_visit).into_iter().for_each(|id| { next_visit.insert(id); } );
           }
         );
         to_visit = next_visit;
-        minutes += 1;
+        mins += 1;
       }
-      distances.sort_by(|(d1,_),(d2,_)| d1.cmp(&d2));
-      assert_eq!(distances.len(), valve_map.len());
-      distance_map.insert(valve.id, distances);
+      distances = distances.into_iter().filter(|d| !useless.contains(&d.valve_id)).collect();
+      //distances.sort_by(|d1,d2| d1.mins.cmp(&d2.mins));
+      assert_eq!(distances.len(), valves.len() - useless.len());
+      distance_matrix.push(distances);
     }
   );
-  return distance_map;
+  return distance_matrix;
 }
 
-fn toggle_valve(valve_map: &mut HashMap<usize, Valve>, id: &usize) {
-  valve_map.get_mut(id).unwrap().open = true;
+fn release_pressure(valves: &Vec<Valve>, distance_matrix: &Vec<Vec<Distance>>, start: ValveId, total_mins: Time) -> Flow {
+  let mut steps = vec![(start, total_mins, 0, HashSet::new())];
+  let mut result = 0;
+
+  while let Some((pos, mins_left, released, open)) = steps.pop() {
+    distance_matrix[pos].iter().for_each(
+      |Distance {mins: t, valve_id: v}| {
+        if mins_left >= *t && !open.contains(v) {
+          let r = open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * t);
+          let mut next_open = open.clone();
+          result = std::cmp::max(result, r);
+          next_open.insert(*v);
+          steps.push((*v, mins_left-t, r, next_open));
+        }
+      }
+    );
+    result = std::cmp::max(result, open.iter().fold(released, |acc, o: &ValveId| acc + valves[*o].flow * mins_left));
+  }
+
+  return result;
 }
 
 fn one(input: &Input) -> String {
-  let (mut valve_map, string_map) = prepare(&input.lines);
-  let (mut mins_left, mut pos, mut released) = (30, string_map["AA"], 0);
-  let distance_map = make_distance_map(&valve_map);
+  let (valves, string_map) = prepare(&input.lines);
+  let distance_matrix = distance_matrix(&valves);
 
-  trace!("{distance_map:?}");
-
-  while mins_left > 0 {
-    // Go walk through the cave and release the best valves based on mins_left and distance_map
-    mins_left -= 1;
-  }
-
-  return "42".to_string();
+  return release_pressure(&valves, &distance_matrix, string_map["AA"], 30).to_string();
 }
 
 fn two(_input: &Input) -> String {
