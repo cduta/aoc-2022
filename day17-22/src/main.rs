@@ -198,7 +198,7 @@ fn one(input: &Input) -> String {
   return board.height().to_string();
 }
 
-fn two(input: &Input) -> String {
+fn two(_input: &Input) -> String {
   // let pushes = prepare(&input.lines);
   // let pieces = pieces();
   // let board  = run(&pushes, &pieces, 1000000000000);
