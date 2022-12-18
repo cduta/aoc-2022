@@ -199,11 +199,25 @@ fn one(input: &Input) -> String {
 }
 
 fn two(input: &Input) -> String {
-  let pushes = prepare(&input.lines);
-  let pieces = pieces();
-  let board  = run(&pushes, &pieces, 1000000000000);
+  // let pushes = prepare(&input.lines);
+  // let pieces = pieces();
+  // let board  = run(&pushes, &pieces, 1000000000000);
 
-  return board.height().to_string();
+  // return board.height().to_string();
+
+  /*
+    Idea: Encode falling piece (.fffffff........) and (.........bbbbbbb) in a u16.
+          Find cycle, by taking each decimal representation (00-63) dc = bbbbbbb to represent board as:
+            dc1
+            dc2
+            dc3
+            ...
+          Take each dci, extract di and ci up to n (dynamic?) and concatenate them (c = 1*c1 + 10*c2 + 100*c3 + ... and d = 1*d1 + 10*d2 + 100*d3 + ...)
+          Then, compare hash(c) and hash(d) with previous hash values of the same length. 
+          If there is a match, this is the cycle. 
+          Fast forward to the last cycle and continue till finished.
+  */
+  return "42".to_string();
 }
 
 fn main() {
