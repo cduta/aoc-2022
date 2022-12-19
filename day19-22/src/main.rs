@@ -52,6 +52,7 @@ impl State {
 }
 
 impl State {
+  // TODO: Is buggy! Use DP?
   fn to_build(&self, blueprint: &Blueprint) -> Option<usize> {
     return if self.ressources[OBSIDIAN] >= blueprint.costs[GEODE][OBSIDIAN] {
       Some(GEODE)
@@ -137,14 +138,13 @@ fn one(input: &Input) -> String {
       let mut mins_left = total_mins;
       while mins_left > 0 {
         mins_left -= 1;
-        trace!("Min: {:>2} # {state}", total_mins-mins_left);
         let robot_option = state.to_build(&blueprint);
         state.mine();
         if let Some(robot) = robot_option {
           state.build(robot, &blueprint);
         }
+        trace!("Min: {:>2} # {state}", total_mins-mins_left);
       }
-      trace!("Final   # {state}");
       quality += blueprint.id*state.ressources[GEODE];
     }
   );
@@ -152,8 +152,31 @@ fn one(input: &Input) -> String {
   return quality.to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+
+  let blueprints = prepare(&input.lines);
+  let mut result = 1;
+
+  blueprints.into_iter().take(3).for_each(
+    |blueprint| {
+      trace!("{blueprint}");
+      let mut state = State::new();
+      let total_mins = 32;
+      let mut mins_left = total_mins;
+      while mins_left > 0 {
+        mins_left -= 1;
+        let robot_option = state.to_build(&blueprint);
+        state.mine();
+        if let Some(robot) = robot_option {
+          state.build(robot, &blueprint);
+        }
+        trace!("Min: {:>2} # {state}", total_mins-mins_left);
+      }
+      result *= state.ressources[GEODE];
+    }
+  );
+
+  return result.to_string();
 }
 
 fn main() {
