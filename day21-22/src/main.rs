@@ -181,9 +181,7 @@ fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>, Opt
   return (monkeys, dependencies, root_id_option);
 }
 
-fn one(input: &Input) -> String {
-  let (mut monkeys, mut dependencies, root_id_option) = prepare(&input.lines);
-  let root_id = root_id_option.unwrap();
+fn scraming_monkeys(monkeys: &mut Vec<Monkey>, dependencies: &mut HashMap<usize, Vec<usize>>, root_id: usize) -> Number {
   let mut ready_monkeys: Vec<Monkey> = vec![];
   monkeys.iter().for_each(
     |monkey| match monkey.expr {
@@ -207,7 +205,13 @@ fn one(input: &Input) -> String {
     );
   }
   assert!(ready_monkeys.is_empty());
-  return if let Expr::Value(val) = monkeys[root_id].expr { val.to_string() } else { panic!("wait, root monkey was not ready") };
+  return if let Expr::Value(val) = monkeys[root_id].expr { val } else { panic!("wait, root monkey was not ready") };
+}
+
+fn one(input: &Input) -> String {
+  let (mut monkeys, mut dependencies, root_id_option) = prepare(&input.lines);
+  let root_id = root_id_option.unwrap();
+  return scraming_monkeys(&mut monkeys, &mut dependencies, root_id).to_string();
 }
 
 fn two(_input: &Input) -> String {
