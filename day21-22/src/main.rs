@@ -181,7 +181,7 @@ fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>, Opt
   return (monkeys, dependencies, root_id_option);
 }
 
-fn scraming_monkeys(monkeys: &mut Vec<Monkey>, dependencies: &mut HashMap<usize, Vec<usize>>, root_id: usize) -> Number {
+fn screaming_monkeys(root_id: usize, monkeys: &mut Vec<Monkey>, dependencies: &mut HashMap<usize, Vec<usize>>) -> Number {
   let mut ready_monkeys: Vec<Monkey> = vec![];
   monkeys.iter().for_each(
     |monkey| match monkey.expr {
@@ -211,11 +211,16 @@ fn scraming_monkeys(monkeys: &mut Vec<Monkey>, dependencies: &mut HashMap<usize,
 fn one(input: &Input) -> String {
   let (mut monkeys, mut dependencies, root_id_option) = prepare(&input.lines);
   let root_id = root_id_option.unwrap();
-  return scraming_monkeys(&mut monkeys, &mut dependencies, root_id).to_string();
+  return screaming_monkeys(root_id, &mut monkeys, &mut dependencies).to_string();
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn two(input: &Input) -> String {
+  let (mut monkeys, mut dependencies, root_id_option) = prepare(&input.lines);
+  let root_id = root_id_option.unwrap();
+
+  let (human_branch_root, monkey_branch_root) = monkeys.get_branches(root_id, &dependencies);
+  let monkey_result = screaming_monkeys(monkey_branch_root, &mut monkeys, &mut dependencies).to_string();
+  return solve_for_x(human_branch_root, &monkeys, &dependencies).to_string();
 }
 
 fn main() {
