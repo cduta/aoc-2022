@@ -76,7 +76,7 @@ impl Display for Expr {
 struct Monkey { id: usize, name: String, expr: Expr }
 
 impl Monkey {
-  fn is_root(&self) -> bool { self.id == 0 }
+  fn is_root(&self, root_id: usize) -> bool { self.id == root_id }
   fn has_value(&self) -> bool { if let Expr::Value(_) = self.expr { true } else { false } }
 
   fn listen(&mut self, other: &Monkey) {
@@ -138,7 +138,7 @@ impl Display for Monkey {
   }
 }
 
-fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>) {
+fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>, Option<usize>) {
   let mut monkey_do = vec![];
   let monkey_map: HashMap<String, usize> = lines.iter().enumerate().map(
     |(id,line)| {
@@ -149,8 +149,10 @@ fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>) {
     }
   ).collect();
   let mut dependencies: HashMap<usize, Vec<usize>> = HashMap::new();
+  let mut root_id_option = None;
   let monkeys = monkey_do.into_iter().enumerate().map(
     |(id, (name, mdo))| {
+      if name == "root".to_string() { root_id_option = Some(id); }
       let split: Vec<&str> = mdo.split_whitespace().collect();
       Monkey { 
         id,
@@ -176,11 +178,12 @@ fn prepare(lines: &Vec<String>) -> (Vec<Monkey>, HashMap<usize, Vec<usize>>) {
       }
     }
   ).collect();
-  return (monkeys, dependencies);
+  return (monkeys, dependencies, root_id_option);
 }
 
 fn one(input: &Input) -> String {
-  let (mut monkeys, mut dependencies) = prepare(&input.lines);
+  let (mut monkeys, mut dependencies, root_id_option) = prepare(&input.lines);
+  let root_id = root_id_option.unwrap();
   let mut ready_monkeys: Vec<Monkey> = vec![];
   monkeys.iter().for_each(
     |monkey| match monkey.expr {
@@ -191,22 +194,20 @@ fn one(input: &Input) -> String {
 
   while !ready_monkeys.is_empty() {
     let screaming_monkey = ready_monkeys.pop().unwrap();
-    if screaming_monkey.is_root() { break; }
+    if screaming_monkey.is_root(root_id) { break; }
     dependencies.remove(&screaming_monkey.id).unwrap().into_iter().for_each(
       |id| {
         let other_monkey = monkeys.get_mut(id).unwrap();
         other_monkey.listen(&screaming_monkey);
         if !other_monkey.waits() {
-          trace!("{other_monkey}");
           other_monkey.eval();
-          trace!("{other_monkey}");
           ready_monkeys.push(other_monkey.clone());
         }
       }
     );
   }
-
-  return if let Expr::Value(val) = monkeys[0].expr { val.to_string() } else { panic!("wait, root monkey was not ready") };
+  assert!(ready_monkeys.is_empty());
+  return if let Expr::Value(val) = monkeys[root_id].expr { val.to_string() } else { panic!("wait, root monkey was not ready") };
 }
 
 fn two(_input: &Input) -> String {
