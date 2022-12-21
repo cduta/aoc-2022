@@ -220,7 +220,7 @@ fn two(input: &Input) -> String {
 
   let (human_branch_root, monkey_branch_root) = monkeys.get_branches(root_id, &dependencies);
   let monkey_result = screaming_monkeys(monkey_branch_root, &mut monkeys, &mut dependencies).to_string();
-  return solve_for_x(human_branch_root, &monkeys, &dependencies).to_string();
+  return solve_for_x(human_branch_root, monkey_result, &monkeys, &dependencies).to_string();
 }
 
 fn main() {
