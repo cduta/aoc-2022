@@ -49,16 +49,11 @@ impl Elf {
         }
       }
     );
+    let proposal_option = proposal_pos_option.map(|proposal_pos| self.next[proposal_pos].go(pos));
+    let dir = self.next.remove(0);
+    self.next.push(dir);
     return if has_neighbor {
-      if let Some(proposal_pos) = proposal_pos_option {
-        let proposal = self.next.remove(proposal_pos);
-        self.next.push(proposal);
-        Some(self.next.last().unwrap().go(pos))
-      } else {
-        let proposal = self.next.remove(0);
-        self.next.push(proposal);
-        None
-      }
+      proposal_option
     } else {
       None
     }
@@ -115,14 +110,16 @@ fn trace_board(elves: &HashMap<Pos,Elf>) {
 }
 
 fn one(input: &Input) -> String {
+  let max_rounds_option = Some(10);
+  let mut round = 0;
   let mut elves = prepare(&input.lines);
   let mut proposed = false;
   let mut proposals: HashMap<Pos, Pos> = HashMap::new();
 
-  while !proposed || !proposals.is_empty() {
+  while (max_rounds_option.is_none() || round < max_rounds_option.unwrap()) && (!proposed || !proposals.is_empty()) {
     proposals.clear();
 
-    trace_board(&elves);
+    //trace_board(&elves);
 
     let occupied: HashSet<Pos> = elves.keys().map(|pos| *pos).collect();
     let mut clash: HashSet<Pos> = HashSet::new();
@@ -149,6 +146,7 @@ fn one(input: &Input) -> String {
       }
     );
 
+    round += 1;
     proposed = true;
   }  
 
@@ -156,7 +154,7 @@ fn one(input: &Input) -> String {
 
   let (min_x,max_x,min_y,max_y) = dims(&elves);
 
-  return (min_x.abs_diff(max_x+1)*min_y.abs_diff(max_y+1)).to_string();
+  return (min_x.abs_diff(max_x+1)*min_y.abs_diff(max_y+1)-elves.len() as u64).to_string();
 }
 
 fn two(_input: &Input) -> String {
