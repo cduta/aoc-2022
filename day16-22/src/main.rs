@@ -1,3 +1,4 @@
+// ## TODO ##
 use common::Input;
 use common::args::Part;
 use common::init::{startup, print, shutdown};
@@ -15,7 +16,8 @@ struct Valve {
   id       : ValveId, 
   name     : String, 
   flow     : Flow, 
-  neighbors: HashSet<ValveId> }
+  neighbors: HashSet<ValveId> 
+}
 
 impl Valve {
   fn new(id: ValveId, name: String, flow: Flow, neighbors: HashSet<ValveId>) -> Valve {
