@@ -109,14 +109,12 @@ fn trace_board(elves: &HashMap<Pos,Elf>) {
   ));
 }
 
-fn one(input: &Input) -> String {
-  let max_rounds_option = Some(10);
+fn scatter(mut elves: HashMap<Pos, Elf>, max_round_option: Option<Int>) -> (Int, Int) {
   let mut round = 0;
-  let mut elves = prepare(&input.lines);
   let mut proposed = false;
   let mut proposals: HashMap<Pos, Pos> = HashMap::new();
 
-  while (max_rounds_option.is_none() || round < max_rounds_option.unwrap()) && (!proposed || !proposals.is_empty()) {
+  while (max_round_option.is_none() || round < max_round_option.unwrap()) && (!proposed || !proposals.is_empty()) {
     proposals.clear();
 
     //trace_board(&elves);
@@ -154,11 +152,17 @@ fn one(input: &Input) -> String {
 
   let (min_x,max_x,min_y,max_y) = dims(&elves);
 
-  return (min_x.abs_diff(max_x+1)*min_y.abs_diff(max_y+1)-elves.len() as u64).to_string();
+  return ((min_x.abs_diff(max_x+1)*min_y.abs_diff(max_y+1)-elves.len() as u64) as Int, round);
 }
 
-fn two(_input: &Input) -> String {
-  return "42".to_string();
+fn one(input: &Input) -> String {
+  let (empty_tiles, _) = scatter(prepare(&input.lines), Some(10));
+  return empty_tiles.to_string();
+}
+
+fn two(input: &Input) -> String {
+  let (_, round) = scatter(prepare(&input.lines), None);
+  return round.to_string();
 }
 
 fn main() {
