@@ -158,7 +158,7 @@ fn one(input: &Input) -> String {
 }
 
 fn two(_input: &Input) -> String {
-  return "42".to_string();
+  return "Blender, GO!".to_string();
 }
 
 fn main() {
